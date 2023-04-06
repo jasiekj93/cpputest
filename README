@@ -1,3 +1,1 @@
-
-Please see the README.md. This file exists to be compliant to GNU coding standards.
-
+Run "git clone https://github.com/jasiekj93/cpputest external/CppUTest" in your project directory.
