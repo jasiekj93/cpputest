@@ -13,7 +13,7 @@
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE EARLIER MENTIONED AUTHORS ''AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY THE EARLIER MENTIONED AUTHORS ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  * DISCLAIMED. IN NO EVENT SHALL <copyright holder> BE LIABLE FOR ANY
@@ -62,17 +62,12 @@ extern int (*PlatformSpecificAtExit)(void(*func)(void));
 /* IO operations */
 typedef void* PlatformSpecificFile;
 
-extern PlatformSpecificFile PlatformSpecificStdOut;
-
 extern PlatformSpecificFile (*PlatformSpecificFOpen)(const char* filename, const char* flag);
 extern void (*PlatformSpecificFPuts)(const char* str, PlatformSpecificFile file);
 extern void (*PlatformSpecificFClose)(PlatformSpecificFile file);
 
+extern int (*PlatformSpecificPutchar)(int c);
 extern void (*PlatformSpecificFlush)(void);
-
-/* Random operations */
-extern void (*PlatformSpecificSrand)(unsigned int);
-extern int (*PlatformSpecificRand)(void);
 
 /* Dynamic Memory operations */
 extern void* (*PlatformSpecificMalloc)(size_t size);
@@ -83,12 +78,9 @@ extern void* (*PlatformSpecificMemset)(void* mem, int c, size_t size);
 
 typedef void* PlatformSpecificMutex;
 extern PlatformSpecificMutex (*PlatformSpecificMutexCreate)(void);
-extern void (*PlatformSpecificSrand)(unsigned int);
-extern int (*PlatformSpecificRand)(void);
 extern void (*PlatformSpecificMutexLock)(PlatformSpecificMutex mtx);
 extern void (*PlatformSpecificMutexUnlock)(PlatformSpecificMutex mtx);
 extern void (*PlatformSpecificMutexDestroy)(PlatformSpecificMutex mtx);
-extern void (*PlatformSpecificAbort)(void);
 
 #ifdef __cplusplus
 }

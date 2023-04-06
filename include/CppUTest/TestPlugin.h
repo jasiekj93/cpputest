@@ -13,7 +13,7 @@
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE EARLIER MENTIONED AUTHORS ''AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY THE EARLIER MENTIONED AUTHORS ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  * DISCLAIMED. IN NO EVENT SHALL <copyright holder> BE LIABLE FOR ANY
@@ -27,8 +27,6 @@
 
 #ifndef D_TestPlugin_h
 #define D_TestPlugin_h
-
-#include "SimpleString.h"
 
 class UtestShell;
 class TestResult;
@@ -48,14 +46,14 @@ public:
     {
     }
 
-    virtual bool parseArguments(int /* ac */, const char *const * /* av */, int /* index */ )
+    virtual bool parseArguments(int /* ac */, const char** /* av */, int /* index */ )
     {
         return false;
     }
 
     virtual void runAllPreTestAction(UtestShell&, TestResult&);
     virtual void runAllPostTestAction(UtestShell&, TestResult&);
-    virtual bool parseAllArguments(int ac, const char *const *av, int index);
+    virtual bool parseAllArguments(int ac, const char** av, int index);
     virtual bool parseAllArguments(int ac, char** av, int index);
 
     virtual TestPlugin* addPlugin(TestPlugin*);
@@ -100,7 +98,7 @@ public:
     };
 };
 
-#define UT_PTR_SET(a, b) do { CppUTestStore( (void**)&a ); a = b; } while(0)
+#define UT_PTR_SET(a, b) { CppUTestStore( (void**)&a ); a = b; }
 
 ///////////// Null Plugin
 

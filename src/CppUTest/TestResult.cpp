@@ -13,7 +13,7 @@
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE EARLIER MENTIONED AUTHORS ''AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY THE EARLIER MENTIONED AUTHORS ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  * DISCLAIMED. IN NO EVENT SHALL <copyright holder> BE LIABLE FOR ANY
@@ -44,19 +44,19 @@ TestResult::~TestResult()
 void TestResult::currentGroupStarted(UtestShell* test)
 {
     output_.printCurrentGroupStarted(*test);
-    currentGroupTimeStarted_ = (size_t) GetPlatformSpecificTimeInMillis();
+    currentGroupTimeStarted_ = GetPlatformSpecificTimeInMillis();
 }
 
 void TestResult::currentGroupEnded(UtestShell* /*test*/)
 {
-    currentGroupTotalExecutionTime_ = (size_t) GetPlatformSpecificTimeInMillis() - currentGroupTimeStarted_;
+    currentGroupTotalExecutionTime_ = GetPlatformSpecificTimeInMillis() - currentGroupTimeStarted_;
     output_.printCurrentGroupEnded(*this);
 }
 
 void TestResult::currentTestStarted(UtestShell* test)
 {
     output_.printCurrentTestStarted(*test);
-    currentTestTimeStarted_ = (size_t) GetPlatformSpecificTimeInMillis();
+    currentTestTimeStarted_ = GetPlatformSpecificTimeInMillis();
 }
 
 void TestResult::print(const char* text)
@@ -64,14 +64,9 @@ void TestResult::print(const char* text)
     output_.print(text);
 }
 
-void TestResult::printVeryVerbose(const char* text)
-{
-    output_.printVeryVerbose(text);
-}
-
 void TestResult::currentTestEnded(UtestShell* /*test*/)
 {
-    currentTestTotalExecutionTime_ = (size_t) GetPlatformSpecificTimeInMillis() - currentTestTimeStarted_;
+    currentTestTotalExecutionTime_ = GetPlatformSpecificTimeInMillis() - currentTestTimeStarted_;
     output_.printCurrentTestEnded(*this);
 
 }
@@ -109,33 +104,33 @@ void TestResult::countIgnored()
 
 void TestResult::testsStarted()
 {
-    timeStarted_ = (size_t) GetPlatformSpecificTimeInMillis();
+    timeStarted_ = GetPlatformSpecificTimeInMillis();
     output_.printTestsStarted();
 }
 
 void TestResult::testsEnded()
 {
-    size_t timeEnded = (size_t) GetPlatformSpecificTimeInMillis();
+    long timeEnded = GetPlatformSpecificTimeInMillis();
     totalExecutionTime_ = timeEnded - timeStarted_;
     output_.printTestsEnded(*this);
 }
 
-size_t TestResult::getTotalExecutionTime() const
+long TestResult::getTotalExecutionTime() const
 {
     return totalExecutionTime_;
 }
 
-void TestResult::setTotalExecutionTime(size_t exTime)
+void TestResult::setTotalExecutionTime(long exTime)
 {
     totalExecutionTime_ = exTime;
 }
 
-size_t TestResult::getCurrentTestTotalExecutionTime() const
+long TestResult::getCurrentTestTotalExecutionTime() const
 {
     return currentTestTotalExecutionTime_;
 }
 
-size_t TestResult::getCurrentGroupTotalExecutionTime() const
+long TestResult::getCurrentGroupTotalExecutionTime() const
 {
     return currentGroupTotalExecutionTime_;
 }

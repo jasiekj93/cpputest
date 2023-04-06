@@ -13,7 +13,7 @@
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE EARLIER MENTIONED AUTHORS ''AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY THE EARLIER MENTIONED AUTHORS ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  * DISCLAIMED. IN NO EVENT SHALL <copyright holder> BE LIABLE FOR ANY
@@ -38,7 +38,7 @@ class JUnitTestOutput: public TestOutput
 {
 public:
     JUnitTestOutput();
-    virtual ~JUnitTestOutput() _destructor_override;
+    virtual ~JUnitTestOutput();
 
     virtual void printTestsStarted() _override;
     virtual void printTestsEnded(const TestResult& result) _override;
@@ -50,7 +50,6 @@ public:
     virtual void printBuffer(const char*) _override;
     virtual void print(const char*) _override;
     virtual void print(long) _override;
-    virtual void print(size_t) _override;
     virtual void printFailure(const TestFailure& failure) _override;
 
     virtual void flush() _override;
@@ -72,10 +71,9 @@ protected:
     virtual void writeTestSuiteSummary();
     virtual void writeProperties();
     virtual void writeTestCases();
-    virtual SimpleString encodeXmlText(const SimpleString& textbody);
-    virtual SimpleString encodeFileName(const SimpleString& fileName);
     virtual void writeFailure(JUnitTestCaseResultNode* node);
     virtual void writeFileEnding();
+
 };
 
 #endif

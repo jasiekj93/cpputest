@@ -13,7 +13,7 @@
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE EARLIER MENTIONED AUTHORS ''AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY THE EARLIER MENTIONED AUTHORS ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  * DISCLAIMED. IN NO EVENT SHALL <copyright holder> BE LIABLE FOR ANY
@@ -24,6 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 #include "CppUTest/TestHarness.h"
 #include "CppUTest/TestOutput.h"
 #include "CppUTest/PlatformSpecificFunctions.h"
@@ -44,7 +45,7 @@ TestOutput::WorkingEnvironment TestOutput::getWorkingEnvironment()
 
 
 TestOutput::TestOutput() :
-    dotCount_(0), verbose_(level_quiet), color_(false), progressIndication_(".")
+    dotCount_(0), verbose_(false), color_(false), progressIndication_(".")
 {
 }
 
@@ -52,9 +53,9 @@ TestOutput::~TestOutput()
 {
 }
 
-void TestOutput::verbose(VerbosityLevel level)
+void TestOutput::verbose()
 {
-    verbose_ = level;
+    verbose_ = true;
 }
 
 void TestOutput::color()
@@ -68,11 +69,6 @@ void TestOutput::print(const char* str)
 }
 
 void TestOutput::print(long n)
-{
-    print(StringFrom(n).asCharString());
-}
-
-void TestOutput::print(size_t n)
 {
     print(StringFrom(n).asCharString());
 }
@@ -96,7 +92,7 @@ TestOutput& operator<<(TestOutput& p, long int i)
 
 void TestOutput::printCurrentTestStarted(const UtestShell& test)
 {
-    if (verbose_ > level_quiet) print(test.getFormattedName().asCharString());
+    if (verbose_) print(test.getFormattedName().asCharString());
 
     if (test.willRun()) {
        setProgressIndicator(".");
@@ -108,7 +104,7 @@ void TestOutput::printCurrentTestStarted(const UtestShell& test)
 
 void TestOutput::printCurrentTestEnded(const TestResult& res)
 {
-    if (verbose_ > level_quiet) {
+    if (verbose_) {
         print(" - ");
         print(res.getCurrentTestTotalExecutionTime());
         print(" ms\n");
@@ -144,20 +140,13 @@ void TestOutput::printCurrentGroupEnded(const TestResult& /*res*/)
 void TestOutput::printTestsEnded(const TestResult& result)
 {
     print("\n");
-    const bool isFailure = result.isFailure();
-    const size_t failureCount = result.getFailureCount();
-    if (isFailure) {
+    if (result.getFailureCount() > 0) {
         if (color_) {
             print("\033[31;1m");
         }
         print("Errors (");
-        if (failureCount > 0) {
-            print(failureCount);
-            print(" failures, ");
-        }
-        else {
-            print("ran nothing, ");
-        }
+        print(result.getFailureCount());
+        print(" failures, ");
     }
     else {
         if (color_) {
@@ -180,16 +169,10 @@ void TestOutput::printTestsEnded(const TestResult& result)
     if (color_) {
         print("\033[m");
     }
-    if (isFailure && failureCount == 0) {
-        print("\nNote: test run failed because no tests were run or ignored. Assuming something went wrong. "
-              "This often happens because of linking errors or typos in test filter.");
-    }
     print("\n\n");
-
-    dotCount_ = 0;
 }
 
-void TestOutput::printTestRun(size_t number, size_t total)
+void TestOutput::printTestRun(int number, int total)
 {
     if (total > 1) {
         print("Test run ");
@@ -237,7 +220,7 @@ void TestOutput::printFailureMessage(SimpleString reason)
     print("\n\n");
 }
 
-void TestOutput::printErrorInFileOnLineFormattedForWorkingEnvironment(SimpleString file, size_t lineNumber)
+void TestOutput::printErrorInFileOnLineFormattedForWorkingEnvironment(SimpleString file, int lineNumber)
 {
     if (TestOutput::getWorkingEnvironment() == TestOutput::visualStudio)
         printVisualStudioErrorInFileOnLine(file, lineNumber);
@@ -245,7 +228,7 @@ void TestOutput::printErrorInFileOnLineFormattedForWorkingEnvironment(SimpleStri
         printEclipseErrorInFileOnLine(file, lineNumber);
 }
 
-void TestOutput::printEclipseErrorInFileOnLine(SimpleString file, size_t lineNumber)
+void TestOutput::printEclipseErrorInFileOnLine(SimpleString file, int lineNumber)
 {
     print("\n");
     print(file.asCharString());
@@ -255,7 +238,7 @@ void TestOutput::printEclipseErrorInFileOnLine(SimpleString file, size_t lineNum
     print(" error:");
 }
 
-void TestOutput::printVisualStudioErrorInFileOnLine(SimpleString file, size_t lineNumber)
+void TestOutput::printVisualStudioErrorInFileOnLine(SimpleString file, int lineNumber)
 {
     print("\n");
     print(file.asCharString());
@@ -265,16 +248,12 @@ void TestOutput::printVisualStudioErrorInFileOnLine(SimpleString file, size_t li
     print(" error:");
 }
 
-void TestOutput::printVeryVerbose(const char* str)
-{
-    if(verbose_ == level_veryVerbose)
-        printBuffer(str);
-}
-
-
 void ConsoleTestOutput::printBuffer(const char* s)
 {
-    PlatformSpecificFPuts(s, PlatformSpecificStdOut);
+    while (*s) {
+        PlatformSpecificPutchar(*s);
+        s++;
+    }
     flush();
 }
 
@@ -288,7 +267,7 @@ StringBufferTestOutput::~StringBufferTestOutput()
 }
 
 CompositeTestOutput::CompositeTestOutput()
-  : outputOne_(NULLPTR), outputTwo_(NULLPTR)
+  : outputOne_(NULL), outputTwo_(NULL)
 {
 }
 
@@ -346,10 +325,10 @@ void CompositeTestOutput::printCurrentGroupEnded(const TestResult& res)
   if (outputTwo_) outputTwo_->printCurrentGroupEnded(res);
 }
 
-void CompositeTestOutput::verbose(VerbosityLevel level)
+void CompositeTestOutput::verbose()
 {
-  if (outputOne_) outputOne_->verbose(level);
-  if (outputTwo_) outputTwo_->verbose(level);
+  if (outputOne_) outputOne_->verbose();
+  if (outputTwo_) outputTwo_->verbose();
 }
 
 void CompositeTestOutput::color()
@@ -371,12 +350,6 @@ void CompositeTestOutput::print(const char* buffer)
 }
 
 void CompositeTestOutput::print(long number)
-{
-  if (outputOne_) outputOne_->print(number);
-  if (outputTwo_) outputTwo_->print(number);
-}
-
-void CompositeTestOutput::print(size_t number)
 {
   if (outputOne_) outputOne_->print(number);
   if (outputTwo_) outputTwo_->print(number);

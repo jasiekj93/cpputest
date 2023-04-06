@@ -13,7 +13,7 @@
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE EARLIER MENTIONED AUTHORS ''AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY THE EARLIER MENTIONED AUTHORS ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  * DISCLAIMED. IN NO EVENT SHALL <copyright holder> BE LIABLE FOR ANY
@@ -31,15 +31,36 @@
 #include "CppUTest/SimpleString.h"
 #include "CppUTest/PlatformSpecificFunctions.h"
 
-#if CPPUTEST_USE_STD_CPP_LIB
-#include <typeinfo>
-#if defined(__GNUC__)
-#include <cxxabi.h>
-#include <memory>
-#endif
-#endif
+static SimpleString removeAllPrintableCharactersFrom(const SimpleString& str)
+{
+    size_t bufferSize = str.size()+1;
+    char* buffer = (char*) PlatformSpecificMalloc(bufferSize);
+    str.copyToBuffer(buffer, bufferSize);
 
-TestFailure::TestFailure(UtestShell* test, const char* fileName, size_t lineNumber, const SimpleString& theMessage) :
+    for (size_t i = 0; i < bufferSize-1; i++)
+        if (buffer[i] != '\t' && buffer[i] != '\n')
+            buffer[i] = ' ';
+
+    SimpleString result(buffer);
+    PlatformSpecificFree(buffer);
+    return result;
+}
+
+static SimpleString addMarkerToString(const SimpleString& str, int markerPos)
+{
+    size_t bufferSize = str.size()+1;
+    char* buffer = (char*) PlatformSpecificMalloc(bufferSize);
+    str.copyToBuffer(buffer, bufferSize);
+
+    buffer[markerPos] = '^';
+
+    SimpleString result(buffer);
+    PlatformSpecificFree(buffer);
+    return result;
+
+}
+
+TestFailure::TestFailure(UtestShell* test, const char* fileName, int lineNumber, const SimpleString& theMessage) :
     testName_(test->getFormattedName()), testNameOnly_(test->getName()), fileName_(fileName), lineNumber_(lineNumber), testFileName_(test->getFile()), testLineNumber_(test->getLineNumber()), message_(theMessage)
 {
 }
@@ -49,7 +70,7 @@ TestFailure::TestFailure(UtestShell* test, const SimpleString& theMessage) :
 {
 }
 
-TestFailure::TestFailure(UtestShell* test, const char* fileName, size_t lineNum) :
+TestFailure::TestFailure(UtestShell* test, const char* fileName, int lineNum) :
     testName_(test->getFormattedName()), testNameOnly_(test->getName()), fileName_(fileName), lineNumber_(lineNum), testFileName_(test->getFile()), testLineNumber_(test->getLineNumber()), message_("no message")
 {
 }
@@ -84,12 +105,12 @@ SimpleString TestFailure::getTestNameOnly() const
     return testNameOnly_;
 }
 
-size_t TestFailure::getFailureLineNumber() const
+int TestFailure::getFailureLineNumber() const
 {
     return lineNumber_;
 }
 
-size_t TestFailure::getTestLineNumber() const
+int TestFailure::getTestLineNumber() const
 {
     return testLineNumber_;
 }
@@ -114,21 +135,25 @@ SimpleString TestFailure::createButWasString(const SimpleString& expected, const
     return StringFromFormat("expected <%s>\n\tbut was  <%s>", expected.asCharString(), actual.asCharString());
 }
 
-SimpleString TestFailure::createDifferenceAtPosString(const SimpleString& actual, size_t offset, size_t reportedPosition)
+SimpleString TestFailure::createDifferenceAtPosString(const SimpleString& actual, size_t position, DifferenceFormat format)
 {
     SimpleString result;
     const size_t extraCharactersWindow = 20;
     const size_t halfOfExtraCharactersWindow = extraCharactersWindow / 2;
+    const size_t actualOffset = (format == DIFFERENCE_STRING) ? position : (position * 3 + 1);
 
     SimpleString paddingForPreventingOutOfBounds (" ", halfOfExtraCharactersWindow);
     SimpleString actualString = paddingForPreventingOutOfBounds + actual + paddingForPreventingOutOfBounds;
-    SimpleString differentString = StringFromFormat("difference starts at position %lu at: <", (unsigned long) reportedPosition);
+    SimpleString differentString = StringFromFormat("difference starts at position %lu at: <", (unsigned long) position);
 
     result += "\n";
-    result += StringFromFormat("\t%s%s>\n", differentString.asCharString(), actualString.subString(offset, extraCharactersWindow).asCharString());
+    result += StringFromFormat("\t%s%s>\n", differentString.asCharString(), actualString.subString(actualOffset, extraCharactersWindow).asCharString());
 
+    SimpleString markString = actualString.subString(actualOffset, halfOfExtraCharactersWindow+1);
+    markString = removeAllPrintableCharactersFrom(markString);
+    markString = addMarkerToString(markString, halfOfExtraCharactersWindow);
 
-    result += StringFromFormat("\t%s^", SimpleString(" ", (differentString.size() + halfOfExtraCharactersWindow)).asCharString());
+    result += StringFromFormat("\t%s%s", SimpleString(" ", differentString.size()).asCharString(), markString.asCharString());
     return result;
 }
 
@@ -137,18 +162,14 @@ SimpleString TestFailure::createUserText(const SimpleString& text)
     SimpleString userMessage = "";
     if (!text.isEmpty())
     {
-        //This is a kludge to turn off "Message: " for this case.
-        //I don't think "Message: " adds anything, as you get to see the
-        //message. I propose we remove "Message: " lead in
-        if (!text.startsWith("LONGS_EQUAL"))
-            userMessage += "Message: ";
+        userMessage += "Message: ";
         userMessage += text;
         userMessage += "\n\t";
     }
     return userMessage;
 }
 
-EqualsFailure::EqualsFailure(UtestShell* test, const char* fileName, size_t lineNumber, const char* expected, const char* actual, const SimpleString& text) :
+EqualsFailure::EqualsFailure(UtestShell* test, const char* fileName, int lineNumber, const char* expected, const char* actual, const SimpleString& text) :
     TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
@@ -156,7 +177,7 @@ EqualsFailure::EqualsFailure(UtestShell* test, const char* fileName, size_t line
     message_ += createButWasString(StringFromOrNull(expected), StringFromOrNull(actual));
 }
 
-EqualsFailure::EqualsFailure(UtestShell* test, const char* fileName, size_t lineNumber, const SimpleString& expected, const SimpleString& actual, const SimpleString& text)
+EqualsFailure::EqualsFailure(UtestShell* test, const char* fileName, int lineNumber, const SimpleString& expected, const SimpleString& actual, const SimpleString& text)
     : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
@@ -164,7 +185,7 @@ EqualsFailure::EqualsFailure(UtestShell* test, const char* fileName, size_t line
     message_ += createButWasString(expected, actual);
 }
 
-DoublesEqualFailure::DoublesEqualFailure(UtestShell* test, const char* fileName, size_t lineNumber, double expected, double actual, double threshold, const SimpleString& text)
+DoublesEqualFailure::DoublesEqualFailure(UtestShell* test, const char* fileName, int lineNumber, double expected, double actual, double threshold, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
@@ -178,36 +199,20 @@ DoublesEqualFailure::DoublesEqualFailure(UtestShell* test, const char* fileName,
         message_ += "\n\tCannot make comparisons with Nan";
 }
 
-CheckEqualFailure::CheckEqualFailure(UtestShell* test, const char* fileName, size_t lineNumber, const SimpleString& expected, const SimpleString& actual, const SimpleString& text)
+CheckEqualFailure::CheckEqualFailure(UtestShell* test, const char* fileName, int lineNumber, const SimpleString& expected, const SimpleString& actual, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
-
-    SimpleString printableExpected = PrintableStringFromOrNull(expected.asCharString());
-    SimpleString printableActual = PrintableStringFromOrNull(actual.asCharString());
-
-    message_ += createButWasString(printableExpected, printableActual);
 
     size_t failStart;
-    for (failStart = 0; actual.at(failStart) == expected.at(failStart); failStart++)
+    for (failStart = 0; actual.asCharString()[failStart] == expected.asCharString()[failStart]; failStart++)
         ;
-    size_t failStartPrintable;
-    for (failStartPrintable = 0; printableActual.at(failStartPrintable) == printableExpected.at(failStartPrintable); failStartPrintable++)
-        ;
-    message_ += createDifferenceAtPosString(printableActual, failStartPrintable, failStart);
+    message_ += createButWasString(expected, actual);
+    message_ += createDifferenceAtPosString(actual, failStart);
+
 }
 
-ComparisonFailure::ComparisonFailure(UtestShell *test, const char *fileName, size_t lineNumber, const SimpleString& checkString, const SimpleString &comparisonString, const SimpleString &text)
-: TestFailure(test, fileName, lineNumber)
-{
-    message_ = createUserText(text);
-    message_ += checkString;
-    message_ += "(";
-    message_ += comparisonString;
-    message_ += ") failed";
-}
-
-ContainsFailure::ContainsFailure(UtestShell* test, const char* fileName, size_t lineNumber, const SimpleString& expected, const SimpleString& actual, const SimpleString& text)
+ContainsFailure::ContainsFailure(UtestShell* test, const char* fileName, int lineNumber, const SimpleString& expected, const SimpleString& actual, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
@@ -215,7 +220,7 @@ ContainsFailure::ContainsFailure(UtestShell* test, const char* fileName, size_t 
     message_ += StringFromFormat("actual <%s>\n\tdid not contain  <%s>", actual.asCharString(), expected.asCharString());
 }
 
-CheckFailure::CheckFailure(UtestShell* test, const char* fileName, size_t lineNumber, const SimpleString& checkString, const SimpleString& conditionString, const SimpleString& text)
+CheckFailure::CheckFailure(UtestShell* test, const char* fileName, int lineNumber, const SimpleString& checkString, const SimpleString& conditionString, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
@@ -226,150 +231,148 @@ CheckFailure::CheckFailure(UtestShell* test, const char* fileName, size_t lineNu
     message_ += ") failed";
 }
 
-FailFailure::FailFailure(UtestShell* test, const char* fileName, size_t lineNumber, const SimpleString& message) : TestFailure(test, fileName, lineNumber)
+FailFailure::FailFailure(UtestShell* test, const char* fileName, int lineNumber, const SimpleString& message) : TestFailure(test, fileName, lineNumber)
 {
     message_ = message;
 }
 
-LongsEqualFailure::LongsEqualFailure(UtestShell* test, const char* fileName, size_t lineNumber, long expected, long actual, const SimpleString& text)
+LongsEqualFailure::LongsEqualFailure(UtestShell* test, const char* fileName, int lineNumber, long expected, long actual, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
 
     SimpleString aDecimal = StringFrom(actual);
+    SimpleString aHex = HexStringFrom(actual);
     SimpleString eDecimal = StringFrom(expected);
+    SimpleString eHex = HexStringFrom(expected);
 
     SimpleString::padStringsToSameLength(aDecimal, eDecimal, ' ');
+    SimpleString::padStringsToSameLength(aHex, eHex, '0');
 
-    SimpleString actualReported = aDecimal + " " + BracketsFormattedHexStringFrom(actual);
-    SimpleString expectedReported = eDecimal + " " + BracketsFormattedHexStringFrom(expected);
+    SimpleString actualReported = aDecimal + " 0x" + aHex;
+    SimpleString expectedReported = eDecimal + " 0x" + eHex;
     message_ += createButWasString(expectedReported, actualReported);
 }
 
-UnsignedLongsEqualFailure::UnsignedLongsEqualFailure(UtestShell* test, const char* fileName, size_t lineNumber, unsigned long expected, unsigned long actual, const SimpleString& text)
+UnsignedLongsEqualFailure::UnsignedLongsEqualFailure(UtestShell* test, const char* fileName, int lineNumber, unsigned long expected, unsigned long actual, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
 
     SimpleString aDecimal = StringFrom(actual);
+    SimpleString aHex = HexStringFrom(actual);
     SimpleString eDecimal = StringFrom(expected);
+    SimpleString eHex = HexStringFrom(expected);
 
     SimpleString::padStringsToSameLength(aDecimal, eDecimal, ' ');
+    SimpleString::padStringsToSameLength(aHex, eHex, '0');
 
-    SimpleString actualReported = aDecimal + " " + BracketsFormattedHexStringFrom(actual);
-    SimpleString expectedReported = eDecimal + " " + BracketsFormattedHexStringFrom(expected);
-
+    SimpleString actualReported = aDecimal + " 0x" + aHex;
+    SimpleString expectedReported = eDecimal + " 0x" + eHex;
     message_ += createButWasString(expectedReported, actualReported);
 }
 
-LongLongsEqualFailure::LongLongsEqualFailure(UtestShell* test, const char* fileName, size_t lineNumber, cpputest_longlong expected, cpputest_longlong actual, const SimpleString& text)
+LongLongsEqualFailure::LongLongsEqualFailure(UtestShell* test, const char* fileName, int lineNumber, cpputest_longlong expected, cpputest_longlong actual, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
 
     SimpleString aDecimal = StringFrom(actual);
+    SimpleString aHex = HexStringFrom(actual);
     SimpleString eDecimal = StringFrom(expected);
+    SimpleString eHex = HexStringFrom(expected);
 
     SimpleString::padStringsToSameLength(aDecimal, eDecimal, ' ');
+    SimpleString::padStringsToSameLength(aHex, eHex, '0');
 
-    SimpleString actualReported = aDecimal + " " + BracketsFormattedHexStringFrom(actual);
-    SimpleString expectedReported = eDecimal + " " + BracketsFormattedHexStringFrom(expected);
+    SimpleString actualReported = aDecimal + " 0x" + aHex;
+    SimpleString expectedReported = eDecimal + " 0x" + eHex;
     message_ += createButWasString(expectedReported, actualReported);
 }
 
-UnsignedLongLongsEqualFailure::UnsignedLongLongsEqualFailure(UtestShell* test, const char* fileName, size_t lineNumber, cpputest_ulonglong expected, cpputest_ulonglong actual, const SimpleString& text)
+UnsignedLongLongsEqualFailure::UnsignedLongLongsEqualFailure(UtestShell* test, const char* fileName, int lineNumber, cpputest_ulonglong expected, cpputest_ulonglong actual, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
 
     SimpleString aDecimal = StringFrom(actual);
+    SimpleString aHex = HexStringFrom(actual);
     SimpleString eDecimal = StringFrom(expected);
+    SimpleString eHex = HexStringFrom(expected);
 
     SimpleString::padStringsToSameLength(aDecimal, eDecimal, ' ');
+    SimpleString::padStringsToSameLength(aHex, eHex, '0');
 
-    SimpleString actualReported = aDecimal + " " + BracketsFormattedHexStringFrom(actual);
-    SimpleString expectedReported = eDecimal + " " + BracketsFormattedHexStringFrom(expected);
+    SimpleString actualReported = aDecimal + " 0x" + aHex;
+    SimpleString expectedReported = eDecimal + " 0x" + eHex;
     message_ += createButWasString(expectedReported, actualReported);
 }
 
-SignedBytesEqualFailure::SignedBytesEqualFailure (UtestShell* test, const char* fileName, size_t lineNumber, signed char expected, signed char actual, const SimpleString& text)
+SignedBytesEqualFailure::SignedBytesEqualFailure (UtestShell* test, const char* fileName, int lineNumber, signed char expected, signed char actual, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
 
     SimpleString aDecimal = StringFrom((int)actual);
+    SimpleString aHex = HexStringFrom(actual);
     SimpleString eDecimal = StringFrom((int)expected);
+    SimpleString eHex = HexStringFrom(expected);
 
     SimpleString::padStringsToSameLength(aDecimal, eDecimal, ' ');
+    SimpleString::padStringsToSameLength(aHex, eHex, '0');
 
-    SimpleString actualReported = aDecimal + " " + BracketsFormattedHexStringFrom(actual);
-    SimpleString expectedReported = eDecimal + " " + BracketsFormattedHexStringFrom(expected);
+    SimpleString actualReported = aDecimal + " 0x" + aHex;
+    SimpleString expectedReported = eDecimal + " 0x" + eHex;
     message_ += createButWasString(expectedReported, actualReported);
 }
 
-StringEqualFailure::StringEqualFailure(UtestShell* test, const char* fileName, size_t lineNumber, const char* expected, const char* actual, const SimpleString& text)
+StringEqualFailure::StringEqualFailure(UtestShell* test, const char* fileName, int lineNumber, const char* expected, const char* actual, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
 
-    SimpleString printableExpected = PrintableStringFromOrNull(expected);
-    SimpleString printableActual = PrintableStringFromOrNull(actual);
-
-    message_ += createButWasString(printableExpected, printableActual);
+    message_ += createButWasString(StringFromOrNull(expected), StringFromOrNull(actual));
     if((expected) && (actual))
     {
         size_t failStart;
         for (failStart = 0; actual[failStart] == expected[failStart]; failStart++)
             ;
-        size_t failStartPrintable;
-        for (failStartPrintable = 0; printableActual.at(failStartPrintable) == printableExpected.at(failStartPrintable); failStartPrintable++)
-            ;
-        message_ += createDifferenceAtPosString(printableActual, failStartPrintable, failStart);
+        message_ += createDifferenceAtPosString(actual, failStart);
     }
 }
 
-StringEqualNoCaseFailure::StringEqualNoCaseFailure(UtestShell* test, const char* fileName, size_t lineNumber, const char* expected, const char* actual, const SimpleString& text)
+StringEqualNoCaseFailure::StringEqualNoCaseFailure(UtestShell* test, const char* fileName, int lineNumber, const char* expected, const char* actual, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
 
-    SimpleString printableExpected = PrintableStringFromOrNull(expected);
-    SimpleString printableActual = PrintableStringFromOrNull(actual);
-
-    message_ += createButWasString(printableExpected, printableActual);
+    message_ += createButWasString(StringFromOrNull(expected), StringFromOrNull(actual));
     if((expected) && (actual))
     {
         size_t failStart;
         for (failStart = 0; SimpleString::ToLower(actual[failStart]) == SimpleString::ToLower(expected[failStart]); failStart++)
             ;
-        size_t failStartPrintable;
-        for (failStartPrintable = 0;
-             SimpleString::ToLower(printableActual.at(failStartPrintable)) == SimpleString::ToLower(printableExpected.at(failStartPrintable));
-             failStartPrintable++)
-            ;
-        message_ += createDifferenceAtPosString(printableActual, failStartPrintable, failStart);
+        message_ += createDifferenceAtPosString(actual, failStart);
     }
 }
 
-BinaryEqualFailure::BinaryEqualFailure(UtestShell* test, const char* fileName, size_t lineNumber, const unsigned char* expected,
+BinaryEqualFailure::BinaryEqualFailure(UtestShell* test, const char* fileName, int lineNumber, const unsigned char* expected,
                                        const unsigned char* actual, size_t size, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
 
-    SimpleString actualHex = StringFromBinaryOrNull(actual, size);
-
-	message_ += createButWasString(StringFromBinaryOrNull(expected, size), actualHex);
+	message_ += createButWasString(StringFromBinaryOrNull(expected, size), StringFromBinaryOrNull(actual, size));
 	if ((expected) && (actual))
 	{
 		size_t failStart;
 		for (failStart = 0; actual[failStart] == expected[failStart]; failStart++)
 			;
-		message_ += createDifferenceAtPosString(actualHex, (failStart * 3 + 1), failStart);
+		message_ += createDifferenceAtPosString(StringFromBinary(actual, size), failStart, DIFFERENCE_BINARY);
 	}
 }
 
-BitsEqualFailure::BitsEqualFailure(UtestShell* test, const char* fileName, size_t lineNumber, unsigned long expected, unsigned long actual,
+BitsEqualFailure::BitsEqualFailure(UtestShell* test, const char* fileName, int lineNumber, unsigned long expected, unsigned long actual,
                                    unsigned long mask, size_t byteCount, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
@@ -378,55 +381,11 @@ BitsEqualFailure::BitsEqualFailure(UtestShell* test, const char* fileName, size_
     message_ += createButWasString(StringFromMaskedBits(expected, mask, byteCount), StringFromMaskedBits(actual, mask, byteCount));
 }
 
-FeatureUnsupportedFailure::FeatureUnsupportedFailure(UtestShell* test, const char* fileName, size_t lineNumber,
+FeatureUnsupportedFailure::FeatureUnsupportedFailure(UtestShell* test, const char* fileName, int lineNumber,
                                                      const SimpleString& featureName, const SimpleString& text)
 : TestFailure(test, fileName, lineNumber)
 {
     message_ = createUserText(text);
 
-    message_ += StringFromFormat("The feature \"%s\" is not supported in this environment or with the feature set selected when building the library.", featureName.asCharString());
+    message_ += StringFromFormat("The feature \"%s\" is not supported in this environment or with the feature set selected when building the library.", featureName.asCharString());;
 }
-
-#if CPPUTEST_HAVE_EXCEPTIONS
-UnexpectedExceptionFailure::UnexpectedExceptionFailure(UtestShell* test)
-: TestFailure(test, "Unexpected exception of unknown type was thrown.")
-{
-}
-
-#if CPPUTEST_USE_STD_CPP_LIB
-#if CPPUTEST_HAVE_RTTI
-static SimpleString getExceptionTypeName(const std::exception &e)
-{
-    const char *name = typeid(e).name();
-#if defined(__GNUC__) && (__cplusplus >= 201103L)
-    int status = -1;
-
-    std::unique_ptr<char, void(*)(void*)> demangledName(
-        abi::__cxa_demangle(name, NULLPTR, NULLPTR, &status),
-        std::free );
-
-    return (status==0) ? demangledName.get() : name;
-#else
-    return name;
-#endif
-}
-#endif // CPPUTEST_HAVE_RTTI
-
-UnexpectedExceptionFailure::UnexpectedExceptionFailure(UtestShell* test, const std::exception &e)
-: TestFailure(
-    test,
-#if CPPUTEST_HAVE_RTTI
-    StringFromFormat(
-        "Unexpected exception of type '%s' was thrown: %s",
-        getExceptionTypeName(e).asCharString(),
-        e.what()
-    )
-#else
-    "Unexpected exception of unknown type was thrown."
-#endif
-)
-{
-    (void) e;
-}
-#endif // CPPUTEST_USE_STD_CPP_LIB
-#endif // CPPUTEST_HAVE_EXCEPTIONS

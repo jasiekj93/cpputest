@@ -1,7 +1,7 @@
 #include "CppUTest/TestHarness.h"
 #include "CppUTest/TeamCityTestOutput.h"
 
-TeamCityTestOutput::TeamCityTestOutput() : currtest_(NULLPTR), currGroup_()
+TeamCityTestOutput::TeamCityTestOutput() : currtest_(0), currGroup_()
 {
 }
 
@@ -12,11 +12,11 @@ TeamCityTestOutput::~TeamCityTestOutput()
 void TeamCityTestOutput::printCurrentTestStarted(const UtestShell& test)
 {
     print("##teamcity[testStarted name='");
-    printEscaped(test.getName().asCharString());
+    print(test.getName().asCharString());
     print("']\n");
     if (!test.willRun()) {
         print("##teamcity[testIgnored name='");
-        printEscaped(test.getName().asCharString());
+        print(test.getName().asCharString());
         print("']\n");
     }
     currtest_ = &test;
@@ -28,7 +28,7 @@ void TeamCityTestOutput::printCurrentTestEnded(const TestResult& res)
         return;
 
     print("##teamcity[testFinished name='");
-    printEscaped(currtest_->getName().asCharString());
+    print(currtest_->getName().asCharString());
     print("' duration='");
     print(res.getCurrentTestTotalExecutionTime());
     print("']\n");
@@ -38,7 +38,7 @@ void TeamCityTestOutput::printCurrentGroupStarted(const UtestShell& test)
 {
     currGroup_ = test.getGroup();
     print("##teamcity[testSuiteStarted name='");
-    printEscaped(currGroup_.asCharString());
+    print(currGroup_.asCharString());
     print("']\n");
 }
 
@@ -48,7 +48,7 @@ void TeamCityTestOutput::printCurrentGroupEnded(const TestResult& /*res*/)
         return;
 
     print("##teamcity[testSuiteFinished name='");
-    printEscaped(currGroup_.asCharString());
+    print(currGroup_.asCharString());
     print("']\n");
 }
 
@@ -80,7 +80,7 @@ void TeamCityTestOutput::printEscaped(const char* s)
 void TeamCityTestOutput::printFailure(const TestFailure& failure)
 {
     print("##teamcity[testFailed name='");
-    printEscaped(failure.getTestNameOnly().asCharString());
+    print(failure.getTestNameOnly().asCharString());
     print("' message='");
     if (failure.isOutsideTestFile() || failure.isInHelperFunction()) {
         print("TEST failed (");
@@ -90,7 +90,7 @@ void TeamCityTestOutput::printFailure(const TestFailure& failure)
         print("): ");
     }
 
-    printEscaped(failure.getFileName().asCharString());
+    print(failure.getFileName().asCharString());
     print(":");
     print(failure.getFailureLineNumber());
 
