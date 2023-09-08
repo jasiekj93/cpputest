@@ -78,6 +78,7 @@ endif
 # Generate dependency information
 CXXFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 
+.PHONY: all clean mrproper distclean
 
 # build all
 all: $(LIB_DIR)/$(TARGET).a
@@ -111,7 +112,12 @@ $(LIB_DIR):
 
 # clean up
 clean:
-	rm -rf $(BUILD_DIR)
+	@echo Cleaning build directory
+	-@rm -rf $(BUILD_DIR)
+
+mrproper distclean: clean
+	@echo Cleaning lib directory
+	-@rm -rf $(LIB_DIR)
   
 # dependencies
 -include $(wildcard $(BUILD_DIR)/*.d)
