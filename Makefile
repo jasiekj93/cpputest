@@ -5,11 +5,14 @@
 
 # Target
 target = libCppUTest
-platform := Pc32
-supported_platforms := Pc32 ArmM4 ArmM7
+supported_platforms := Pc32 Pc64 ArmM4 ArmM7
+platform ?= Pc32
 
-ifeq (platform, Pc32)
-target += Pc32
+ifeq ($(filter $(supported_platforms),$(PLATFORM)),)
+$(warning "Platform "$(PLATFORM)" is not supported! Using default: Pc32")
+platform := Pc32
+else
+platform := $(PLATFORM)
 endif
 
 # debug
@@ -51,6 +54,7 @@ cpu := -mcpu=cortex-m7
 fpu := -mfpu=fpv5-sp-d16
 float-abi := -mfloat-abi=hard
 mcu := $(cpu) -mthumb $(fpu) $(float-abi)
+else ifeq ($(platform), Pc64)
 else
 $(error "Platform $(platform) not supported!")
 endif 
@@ -88,12 +92,12 @@ endif
 cxxflags += -MMD -MP -MF"$(@:%.o=%.d)"
 
 
-.PHONY: all $(supported_platforms) clean mrproper distclean
+.PHONY: all library clean mrproper distclean
 
-all: $(supported_platforms)
+all: $(lib_dir)/$(target).a
 
-$(supported_platforms):
-	+@$(MAKE) --directory=. library platform=$@
+# $(supported_platforms):
+# 	+@$(MAKE) --directory=. library platform=$@
 
 library: $(lib_dir)/$(target).a
 
@@ -105,13 +109,13 @@ vpath %.cpp $(sort $(dir $(cxx_sources)))
 
 # build C++ objects
 $(build_dir)/%.o: %.cpp Makefile | $(build_dir)
-	@echo Compiling $<
+	@echo "Compiling $< ($(platform))"
 	@$(CXX) -c $(cxxflags) -Wa,-a,-ad,-alms=$(build_dir)/$(notdir $(<:.cpp=.lst)) $< -o $@
 
 # build library
 $(lib_dir)/$(target).a: $(objects) Makefile | $(lib_dir)
-	@echo Creating library $@
-	@$(AR) rcs $@ $(objects) 
+	@echo "Creating library $@ ($(platform))"
+	@$(AR) rcs $@ $(objects)
 
 # create directories
 $(build_dir):
